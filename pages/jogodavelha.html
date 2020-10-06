@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <title>Jogo da Velha</title>
+</head>
+<style>
+    body {
+        background-color: #222b39;
+        color: #ffffff;
+        font-family: Arial;
+        font-weight: lighter;
+        text-align: center;
+    }
+    #header {       font-size: 100px;    }
+    table {
+        border-spacing: 10px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .cell {
+        font-weight: 900;
+        font-size: 100px;
+        width: 150px;
+        height: 150px;
+        border-radius: 10px;
+        cursor: pointer;
+        background-color: #268;
+        color: rgba(255, 255, 255, 0);
+        opacity: 0.3;
+        transition-duration: 0.4s;
+    }
+    .cellHover {        opacity: 0.6;        color: rgba(255, 255, 255, 0.5);    }
+
+    .cellRed {
+        opacity: 1;
+        background-color: #2aafc7;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .cellBlue {        opacity: 1;        background-color: #ff6059;        color: rgba(255, 255, 255, 0.9);    }
+
+    .modal-container {
+        position: absolute;
+        left: 50%;
+        top: 375px;
+        transform: translate(-50%, -50%);
+        display: none;
+    }
+    .modal {
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.4);
+        color: #ddd;
+        padding: 20px 10px 30px 10px;
+        width: 350px;
+    }
+    .modal-title {        font-size: 30px;        margin-bottom: 30px;    }
+    .button-area span {
+        font-family: Raleway;
+        display: inline-block;
+        font-size: 50px;
+        font-weight: 900;
+        background-color: #333;
+        margin: 0px 20px 0px 20px;
+        width: 60px;
+    }
+    .button-area span:hover {        cursor: pointer;        background-color: hsla(30, 10%, 30%, 0.95);    }
+</style>
+
+<body>
+    <h1 id="header">Jogo da Velha</h1>
+    <table>
+        <tr>
+            <td class="cell" id="0"></td>
+            <td class="cell" id="1"></td>
+            <td class="cell" id="2"></td>
+        </tr>
+        <tr>
+            <td class="cell" id="3"></td>
+            <td class="cell" id="4"></td>
+            <td class="cell" id="5"></td>
+        </tr>
+        <tr>
+            <td class="cell" id="6"></td>
+            <td class="cell" id="7"></td>
+            <td class="cell" id="8"></td>
+        </tr>
+    </table>
+    <div class="modal-container">
+        <div class="modal choose-modal animated">
+            <h3 class="modal-title">Escolha seu Simbolo:</h3>
+            <div class="button-area">
+                <span class="x-marker">X</span><span class="o-marker">O</span>
+            </div>
+        </div>
+    </div>
+    <div class="lines">
+        <div class="diagonal"></div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            reset();
+            $(".cell").hover(
+                function () {
+                    if ($(this).text() != "" || !inGame) return;
+                    $(this).text(getSymbol()).addClass("cellHover");
+                },
+                function () {
+                    if (tiles[parseInt($(this).attr("id"))] != 0) return;
+                    $(this).text("").removeClass("cellHover");
+                }
+            );
+            $(".cell").click(function () {
+                if (!inGame) return;
+                pressed(parseInt($(this).attr("id")));
+                $(this).removeClass("cellHover");
+            });
+        });
+        var player, tiles, inGame, choosenPlayer;
+        var wp = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6],
+        ]; 
+        function chooseModal(winner) {
+            console.log("chooseModal");
+            $(".modal-container").css("display", "block");
+            $(".choose-modal").addClass("bounceInUp");
+            if (winner != undefined) $(".modal-title").text(winner);
+            $(".button-area span").click(function () {
+                console.log("clicked");
+                choosenPlayer = $(this).text() == "X" ? 1 : -1;
+                $(".choose-modal").addClass("bounceOutDown");
+                setTimeout(function () {
+                    $(".modal-container").css("display", "none");
+                    inGame = true;
+                }, 600);
+            });
+        }
+        function getSymbol() {
+            return player == choosenPlayer ? "X" : "O";
+        }
+        function reset(winner) {
+            player = 1;
+            inGame = false;
+            tiles = [];
+            for (var i = 0; i < 9; i++) {
+                tiles.push(0);
+                $("#" + i)
+                    .text("")
+                    .removeClass("cellRed")
+                    .removeClass("cellBlue");
+            }
+            $(".choose-modal")
+                .removeClass("bounceOutDown")
+                .removeClass("bounceInUp");
+            chooseModal(winner);
+        }
+        function set(i) {
+            console.log("set", i, player);
+            tiles = calc(tiles, i, player);
+            let clr = player == 1 ? "cellRed" : "cellBlue";
+            $("#" + i)
+                .text(getSymbol())
+                .addClass(clr);
+            player = -player;
+        }
+        function pressed(number) {
+            if (finished() != 2) {
+                runFinished();
+                return;
+            }
+            if (tiles[number] != 0) return;
+            set(number);
+            if (finished() == 2) {
+                set(minMax(tiles.slice(0), 0, -1));
+            }
+            if (finished() != 2) setTimeout(runFinished, 300);
+        }
+        function runFinished() {
+            inGame = false;
+            if (finished() == 0) {
+                setTimeout(function () {
+                    reset("Im sorry You have lost");
+                }, 500);
+                return;
+            }
+            var winp;
+            for (var i = 0; i < wp.length; i++) {
+                if (
+                    tiles[wp[i][0]] === tiles[wp[i][1]] &&
+                    tiles[wp[i][0]] === tiles[wp[i][2]] &&
+                    tiles[wp[i][0]] !== 0
+                )
+                    winp = wp[i];
+            }
+            setTimeout(function () {
+                reset("You wanna play again");
+            }, 500);
+        }
+        function calc(tiles, i, player) {
+            tiles[i] = player;
+            return tiles;
+        }
+        function finished() {
+            return finished_(tiles);
+        }
+        function finished_(tiles) {
+            for (var i = 0; i < wp.length; i++) {
+                if (
+                    tiles[wp[i][0]] === tiles[wp[i][1]] &&
+                    tiles[wp[i][0]] === tiles[wp[i][2]] &&
+                    tiles[wp[i][0]] !== 0
+                )
+                    return tiles[wp[i][0]];
+            }
+            for (var i = 0; i < tiles.length; i++)
+                if (tiles[i] === 0) return 2;
+            return 0;
+        }
+        function minMax(tiles_, depth, player_) {
+            if (finished_(tiles_) != 2) {
+                return finished_(tiles_);
+            }
+            let moves = getValids(tiles_);
+            var results = [];
+            for (var i = 0; i < moves.length; i++) {
+                results.push(
+                    minMax(
+                        calc(tiles_.slice(0), moves[i], player_),
+                        depth - 1,
+                        -player_
+                    )
+                );
+            }
+            var indexOfBest = 0;
+            for (var i = 0; i < moves.length; i++) {
+                if (player_ == player) {
+                    if (results[indexOfBest] > results[i]) {
+                        indexOfBest = i;
+                    }
+                } else {
+                    if (results[indexOfBest] < results[i]) {
+                        indexOfBest = i;
+                    }
+                }
+            }
+            return depth == 0 ? moves[indexOfBest] : results[indexOfBest];
+        }
+        function getValids(tiles_) {
+            var arr = [];
+            for (var i = 0; i < tiles_.length; i++) {
+                if (tiles_[i] == 0) {
+                    arr.push(i);
+                }
+            }
+            return arr;
+        }
+    </script>
+</body>
+</html>
